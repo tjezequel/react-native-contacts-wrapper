@@ -55,6 +55,12 @@ RCT_EXPORT_METHOD(getEmail:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseR
  */
 -(void) launchContacts {
   
+  [[CNContactStore new]requestAccessForEntityType:CNEntityTypeContacts completionHandler:^(BOOL granted, NSError * _Nullable error) {
+    if(error) {
+      return
+    }
+  }]
+  
   UIViewController *picker;
   if([CNContactPickerViewController class]) {
     //iOS 9+
@@ -65,16 +71,18 @@ RCT_EXPORT_METHOD(getEmail:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseR
     picker = [[ABPeoplePickerNavigationController alloc] init];
     [((ABPeoplePickerNavigationController *)picker) setPeoplePickerDelegate:self];
   }
-  //Launch Contact Picker or Address Book View Controller
-  UIViewController *root = [[[UIApplication sharedApplication] delegate] window].rootViewController;
-  BOOL modalPresent = (BOOL) (root.presentedViewController);
-  if (modalPresent) {
-	  UIViewController *parent = root.presentedViewController;
-	  [parent presentViewController:picker animated:YES completion:nil];
-  } else {
-	  [root presentViewController:picker animated:YES completion:nil];
-  }
   
+  //Launch Contact Picker or Address Book View Controller
+  dispatch_async(dispatch_get_main_queue(), ^{
+    UIViewController *root = [[[UIApplication sharedApplication] delegate] window].rootViewController;
+    BOOL modalPresent = (BOOL) (root.presentedViewController);
+    if (modalPresent) {
+      UIViewController *parent = root.presentedViewController;
+      [parent presentViewController:picker animated:YES completion:nil];
+    } else {
+      [root presentViewController:picker animated:YES completion:nil];
+    }
+  })
 }
 
 
@@ -107,7 +115,7 @@ RCT_EXPORT_METHOD(getEmail:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseR
 
 
 - (NSMutableDictionary *) emptyContactDict {
-  return [[NSMutableDictionary alloc] initWithObjects:@[@"", @"", @""] forKeys:@[@"name", @"phone", @"email"]];
+  return [[NSMutableDictionary alloc] initWithObjects:@[@"", @"", @"", @""] forKeys:@[@"firstName", @"lastName", @"phone", @"email"]];
 }
 
 /**
@@ -133,10 +141,14 @@ RCT_EXPORT_METHOD(getEmail:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseR
       NSMutableDictionary *contactData = [self emptyContactDict];
       
       NSString *fullName = [self getFullNameForFirst:contact.givenName middle:contact.middleName last:contact.familyName ];
+      NSString *firstName = contact.givenName;
+      NSString *lastName = contact.familyName;
       NSArray *phoneNos = contact.phoneNumbers;
       NSArray *emailAddresses = contact.emailAddresses;
       
       //Return full name
+      [contactData setValue:firstName forKey:@"firstName"];
+      [contactData setValue:lastName forKey:@"lastName"];
       [contactData setValue:fullName forKey:@"name"];
       
       //Return first phone number
