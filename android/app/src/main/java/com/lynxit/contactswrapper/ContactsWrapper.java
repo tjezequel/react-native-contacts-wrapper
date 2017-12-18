@@ -144,7 +144,9 @@ public class ContactsWrapper extends ReactContextBaseJavaModule implements Activ
                             // Create the projection (SQL fields) and sort order.
                             String[] projection = {
                                 ContactsContract.Contacts.Entity.MIMETYPE,
-                                ContactsContract.Contacts.Entity.DATA1
+                                ContactsContract.Contacts.Entity.DATA1,
+                                ContactsContract.Contacts.Entity.DATA2,
+                                ContactsContract.Contacts.Entity.DATA3,
                             };
                             String sortOrder = ContactsContract.Contacts.Entity.RAW_CONTACT_ID + " ASC";
                             cursor = this.contentResolver.query(contactUri, projection, null, null, sortOrder);
@@ -164,7 +166,12 @@ public class ContactsWrapper extends ReactContextBaseJavaModule implements Activ
                                 do {
                                     mime = cursor.getString(mimeIdx);
                                     if(returnKeys.containsKey(mime)) {
-                                        contactData.putString((String) returnKeys.get(mime), cursor.getString(dataIdx));
+                                        if(mime.equals("vnd.android.cursor.item/name")) {
+                                            contactData.putString("firstName", cursor.getString(2));
+                                            contactData.putString("lastName", cursor.getString(3));
+                                        } else {
+                                            contactData.putString((String) returnKeys.get(mime), cursor.getString(dataIdx));
+                                        }
                                         foundData = true;
                                     }
                                 } while (cursor.moveToNext());
